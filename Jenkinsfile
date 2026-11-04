@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME  = 'osamaahmed123456/ivolve-nodeapp'
+        IMAGE_NAME  = 'osamaahmed123456/ivolve'
         IMAGE_TAG   = "${BUILD_NUMBER}"
         DEPLOY_FILE = 'deplyment.yaml'
         SVC_FILE    = 'svc.yaml'
