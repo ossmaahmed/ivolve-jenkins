@@ -74,7 +74,8 @@ pipeline {
                         esac
                         BODY=$(printf '%s' "$RAW" | sed -e 's/-----BEGINCERTIFICATE-----//' -e 's/-----ENDCERTIFICATE-----//')
                         { echo "-----BEGIN CERTIFICATE-----"; printf '%s' "$BODY" | fold -w 64; echo; echo "-----END CERTIFICATE-----"; } > "$CA_FILE"
-                        K="kubectl --server=${K8S_SERVER} --certificate-authority=${CA_FILE} --token=${K8S_TOKEN} -n ${NAMESPACE}"
+                        TOKEN=$(printf '%s' "$K8S_TOKEN" | tr -d '[:space:]')
+                        K="kubectl --server=${K8S_SERVER} --certificate-authority=${CA_FILE} --token=${TOKEN} -n ${NAMESPACE}"
                         $K apply -f ${DEPLOY_FILE}
                         $K apply -f ${SVC_FILE}
                         $K rollout status deployment/ivolveapp --timeout=180s
