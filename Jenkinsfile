@@ -40,10 +40,10 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'docker-hub',
                                                   usernameVariable: 'DH_USER',
                                                   passwordVariable: 'DH_PASS')]) {
-                    sh '''
-                        echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin
-                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
-                    '''
+                    sh 'echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin'
+                    retry(4) {
+                        sh 'docker push ${IMAGE_NAME}:${IMAGE_TAG}'
+                    }
                 }
             }
         }
