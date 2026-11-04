@@ -37,7 +37,7 @@ pipeline {
 
         stage('Push Image to DockerHub') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials',
+                withCredentials([usernamePassword(credentialsId: 'docker-hub',
                                                   usernameVariable: 'DH_USER',
                                                   passwordVariable: 'DH_PASS')]) {
                     sh '''
@@ -63,10 +63,16 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([string(credentialsId: 'jenkinssa-token', variable: 'K8S_TOKEN'),
-                                 file(credentialsId: 'k8s-ca', variable: 'K8S_CA')]) {
+                withCredentials([string(credentialsId: 'jenkins-sa', variable: 'K8S_TOKEN'),
+                                 string(credentialsId: 'jenkins-ca', variable: 'K8S_CA')]) {
                     sh '''
-                        K="kubectl --server=${K8S_SERVER} --certificate-authority=${K8S_CA} --token=${K8S_TOKEN} -n ${NAMESPACE}"
+                        CA_FILE=$(mktemp)
+                        trap 'rm -f "$CA_FILE"' EXIT
+                        printf '%s' "$K8S_CA" > "$CA_FILE"
+                        if ! grep -q "BEGIN CERTIFICATE" "$CA_FILE"; then
+                            printf '%s' "$K8S_CA" | base64 -d > "$CA_FILE"
+                        fi
+                        K="kubectl --server=${K8S_SERVER} --certificate-authority=${CA_FILE} --token=${K8S_TOKEN} -n ${NAMESPACE}"
                         $K apply -f ${DEPLOY_FILE}
                         $K apply -f ${SVC_FILE}
                         $K rollout status deployment/ivolveapp --timeout=180s
