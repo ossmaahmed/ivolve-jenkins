@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME  = 'osamaahmed123456/ivolve_compose'
+        IMAGE_NAME  = 'osamaahmed123456/ivolve-nodeapp'
         IMAGE_TAG   = "${BUILD_NUMBER}"
         DEPLOY_FILE = 'deplyment.yaml'
         SVC_FILE    = 'svc.yaml'
@@ -56,7 +56,7 @@ pipeline {
 
         stage('Update Image in Deployment File') {
             steps {
-                sh 'sed -i "s|image: ${IMAGE_NAME}:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|" ${DEPLOY_FILE}'
+                sh 'sed -i "/name: myapp-container/{n;s|image:.*|image: ${IMAGE_NAME}:${IMAGE_TAG}|}" ${DEPLOY_FILE}'
                 sh 'grep -n "image:" ${DEPLOY_FILE}'
             }
         }
@@ -68,10 +68,12 @@ pipeline {
                     sh '''
                         CA_FILE=$(mktemp)
                         trap 'rm -f "$CA_FILE"' EXIT
-                        printf '%s' "$K8S_CA" > "$CA_FILE"
-                        if ! grep -q "BEGIN CERTIFICATE" "$CA_FILE"; then
-                            printf '%s' "$K8S_CA" | base64 -d > "$CA_FILE"
-                        fi
+                        RAW=$(printf '%s' "$K8S_CA" | tr -d '[:space:]')
+                        case "$RAW" in
+                            LS0tLS1CRUdJTi*) RAW=$(printf '%s' "$RAW" | base64 -d | tr -d '[:space:]') ;;
+                        esac
+                        BODY=$(printf '%s' "$RAW" | sed -e 's/-----BEGINCERTIFICATE-----//' -e 's/-----ENDCERTIFICATE-----//')
+                        { echo "-----BEGIN CERTIFICATE-----"; printf '%s' "$BODY" | fold -w 64; echo; echo "-----END CERTIFICATE-----"; } > "$CA_FILE"
                         K="kubectl --server=${K8S_SERVER} --certificate-authority=${CA_FILE} --token=${K8S_TOKEN} -n ${NAMESPACE}"
                         $K apply -f ${DEPLOY_FILE}
                         $K apply -f ${SVC_FILE}
