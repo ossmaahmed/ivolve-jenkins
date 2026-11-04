@@ -13,7 +13,7 @@ pipeline {
     stages {
         stage('Clone') {
             steps {
-                git branch: 'main', url: 'https://github.com/ossmaahmed/YOUR_REPO_NAME.git'
+                git branch: 'main', url: 'https://github.com/ossmaahmed/ivolve-jenkins'
             }
         }
 
