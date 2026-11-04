@@ -1,0 +1,38 @@
+services:
+  db:
+    image: mysql:8
+    container_name: mysql-db
+    environment:
+      MYSQL_DATABASE: ivolve
+      MYSQL_USER: osama
+      MYSQL_PASSWORD: 123
+      MYSQL_ROOT_PASSWORD: 1234
+    volumes:
+      - db_mysql:/var/lib/mysql
+    networks:
+      - ivolve_net
+
+  app:
+    build: .
+    image: ivolve_compose
+    container_name: front_compose
+    depends_on:
+      - db
+    ports:
+      - "3035:3000"
+    networks:
+      - ivolve_net
+    volumes:
+      - logs:/app/logs
+    environment:
+      DB_HOST: db
+      DB_USER: osama
+      DB_PASSWORD: 123
+      DB_PORT: 3306
+
+volumes:
+  db_mysql:
+  logs:
+
+networks:
+  ivolve_net:

@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ivolveapp
+  namespace: ivolve
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: myapp
+  template:
+    metadata:
+      labels:
+        app: myapp
+    spec:
+      nodeSelector:
+        project: ivolve
+      tolerations:
+        - key: "workload"
+          operator: "Equal"
+          value: "ivolveApp"
+          effect: "NoSchedule"
+      initContainers:
+        - name: init-mysql
+          image: mysql:8
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ivolvesecret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: ivolvecm
+                  key: DB_USER
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ivolvecm
+                  key: DB_HOST
+          command:
+            - sh
+            - -c
+            - |
+              until mysqladmin ping -h "$DB_HOST" --silent; do
+                echo "Waiting for $DB_HOST..."
+                sleep 2
+              done
+
+              mysql -h "$DB_HOST" -u root -p"$MYSQL_ROOT_PASSWORD" <<EOSQL
+              CREATE DATABASE IF NOT EXISTS ivolve;
+              CREATE USER IF NOT EXISTS '$DB_USER'@'%' IDENTIFIED BY 'ivolve123';
+              GRANT ALL PRIVILEGES ON ivolve.* TO '$DB_USER'@'%';
+              FLUSH PRIVILEGES;
+              EOSQL
+              echo "Done: DB=ivolve USER=$DB_USER"
+      containers:
+        - name: myapp-container
+          image: osamaahmed123456/ivolve_compose:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: ivolvecm
+                  key: DB_USER
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: ivolvecm
+                  key: DB_HOST
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ivolvesecret
+                  key: DB_PASSWORD
+          volumeMounts:
+            - name: myapp-volume
+              mountPath: /app/logs
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "1"
+            limits:
+              memory: "2Gi"
+              cpu: "2"
+      volumes:
+        - name: myapp-volume
+          persistentVolumeClaim:
+            claimName: ivolvepvc
