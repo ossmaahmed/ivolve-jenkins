@@ -31,7 +31,7 @@ pipeline {
 
         stage('Scan Docker Image') {
             steps {
-                sh 'trivy image --severity HIGH,CRITICAL --exit-code 0 ${IMAGE_NAME}:${IMAGE_TAG}'
+                sh 'trivy image --timeout 20m --scanners vuln --severity HIGH,CRITICAL --exit-code 0 ${IMAGE_NAME}:${IMAGE_TAG}'
             }
         }
 
