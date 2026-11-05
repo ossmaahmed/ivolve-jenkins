@@ -65,6 +65,7 @@ pipeline {
             steps {
                 withCredentials([string(credentialsId: 'jenkins-sa', variable: 'K8S_TOKEN'),
                                  string(credentialsId: 'jenkins-ca', variable: 'K8S_CA')]) {
+                    retry(3) {
                     sh '''
                         CA_FILE=$(mktemp)
                         trap 'rm -f "$CA_FILE"' EXIT
@@ -80,6 +81,7 @@ pipeline {
                         $K apply -f ${SVC_FILE}
                         $K rollout status deployment/ivolveapp --timeout=180s
                     '''
+                    }
                 }
             }
         }
