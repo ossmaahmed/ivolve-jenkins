@@ -1,0 +1,33 @@
+def call(Map cfg = [:]) {
+    if (!cfg.image) {
+        error 'BuildImage: parameter "image" is required, for example osamaahmed123456/ivolve'
+    }
+    def tag          = cfg.tag ?: env.BUILD_NUMBER
+    def credsId      = cfg.credentialsId ?: 'docker-hub'
+    def pushRetries  = cfg.pushRetries ?: 4
+    def scanTimeout  = cfg.scanTimeout ?: '20m'
+    def exitCode     = cfg.scanExitCode ?: 0
+    def fullName     = "${cfg.image}:${tag}"
+
+    echo "Building image ${fullName}"
+    retry(cfg.buildRetries ?: 3) {
+        sh "docker build -t ${fullName} ."
+    }
+
+    echo "Scanning image ${fullName}"
+    sh "trivy image --timeout ${scanTimeout} --scanners vuln --severity HIGH,CRITICAL --exit-code ${exitCode} ${fullName}"
+
+    echo "Pushing image ${fullName}"
+    withCredentials([usernamePassword(credentialsId: credsId,
+                                      usernameVariable: 'DH_USER',
+                                      passwordVariable: 'DH_PASS')]) {
+        sh 'echo "$DH_PASS" | docker login -u "$DH_USER" --password-stdin'
+        retry(pushRetries) {
+            sh "docker push ${fullName}"
+        }
+    }
+
+    echo "Deleting image ${fullName} locally"
+    sh "docker rmi ${fullName}"
+    sh 'docker logout || true'
+}
