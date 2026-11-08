@@ -5,14 +5,13 @@ pipeline {
 
     environment {
         IMAGE_NAME = 'osamaahmed123456/ivolve'
-        K8S_SERVER = 'https://192.168.17.146:6443'
-        NAMESPACE  = 'ivolve'
+        REPO_URL   = 'https://github.com/ossmaahmed/ivolve-jenkins'
     }
 
     stages {
         stage('Clone') {
             steps {
-                git branch: 'main', url: 'https://github.com/ossmaahmed/ivolve-jenkins'
+                git branch: 'main', url: env.REPO_URL
             }
         }
 
@@ -33,14 +32,10 @@ pipeline {
                 DeployOnK8s(
                     image: env.IMAGE_NAME,
                     tag: env.BUILD_NUMBER,
-                    server: env.K8S_SERVER,
-                    namespace: env.NAMESPACE,
-                    deployFile: 'deplyment.yaml',
-                    svcFile: 'svc.yaml',
+                    repoUrl: env.REPO_URL,
+                    deployFile: 'k8s/deplyment.yaml',
                     containerName: 'myapp-container',
-                    deployName: 'ivolveapp',
-                    tokenCredentialsId: 'jenkins-sa',
-                    caCredentialsId: 'jenkins-ca'
+                    credentialsId: 'github'
                 )
             }
         }
@@ -52,7 +47,7 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Pipeline succeeded: ${env.IMAGE_NAME}:${env.BUILD_NUMBER} deployed to ${env.NAMESPACE}"
+            echo "Pipeline succeeded: ${env.IMAGE_NAME}:${env.BUILD_NUMBER} pushed to Git, Argo CD will sync it"
         }
         failure {
             echo 'Pipeline failed, check the console output of the failed stage'
