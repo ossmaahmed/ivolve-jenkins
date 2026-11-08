@@ -57,7 +57,7 @@ spec:
               echo "Done: DB=ivolve USER=$DB_USER"
       containers:
         - name: myapp-container
-          image: osamaahmed123456/ivolve:2
+          image: osamaahmed123456/ivolve:3
           ports:
             - containerPort: 3000
           env:
