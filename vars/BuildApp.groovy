@@ -1,4 +1,3 @@
-
 def call(Map cfg = [:]) {
     def installCmd = cfg.installCmd ?: 'npm install'
     def testCmd    = cfg.testCmd    ?: 'npm test --if-present'
